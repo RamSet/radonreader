@@ -11,7 +11,8 @@ This project provides a tool which allows users collect current radon data from 
 
 # Software Requeriments
 - Python 2.7.x 
-- bluepy Python library
+- pip install bluepy
+- pip install paho-mqtt
 
 
 # History
