@@ -26,6 +26,7 @@ parser.add_argument('-mp',dest='mqtt_port',help='MQTT server service port (Defau
 parser.add_argument('-mu',dest='mqtt_user',help='MQTT server username', required=False)
 parser.add_argument('-mw',dest='mqtt_pw',help='MQTT server password', required=False)
 parser.add_argument('-ma',dest='mqtt_ha',action='store_true',help='Switch to Home Assistant MQTT output (Default: EmonCMS)', required=False)
+#parser.add_argument('-grafana',dest='grafana',help='Log to networked grafana DB', required=False)
 args = parser.parse_args()
 
 args.address = args.address.upper()
@@ -103,6 +104,9 @@ def GetRadonValue():
         sleep(1)
         clientMQTT.disconnect()
 
+    #if args.grafana:
+        #print ("Pushing to DB")
+   
 try:
     GetRadonValue()
 
