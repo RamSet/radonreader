@@ -14,6 +14,7 @@ import paho.mqtt.client as mqtt
 from bluepy import btle
 from time import sleep
 from random import randint
+import subprocess
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,description=__progname__)
 parser.add_argument('-a',dest='address',help='Bluetooth Address (AA:BB:CC:DD:EE:FF format)',required=True)
@@ -26,7 +27,8 @@ parser.add_argument('-mp',dest='mqtt_port',help='MQTT server service port (Defau
 parser.add_argument('-mu',dest='mqtt_user',help='MQTT server username', required=False)
 parser.add_argument('-mw',dest='mqtt_pw',help='MQTT server password', required=False)
 parser.add_argument('-ma',dest='mqtt_ha',action='store_true',help='Switch to Home Assistant MQTT output (Default: EmonCMS)', required=False)
-#parser.add_argument('-g','--grafana',action='store_true'dest='grafana',help='Log to networked grafana DB', required=False)
+parser.add_argument('-g','--grafana',action='store_true',help='Log to networked grafana DB', required=False)
+parser.add_argument('-q','--quiet',action='store_true',help='No output (used with Grafana)', required=False)
 args = parser.parse_args()
 
 args.address = args.address.upper()
@@ -56,11 +58,11 @@ def GetRadonValue():
     RadonEyeValue = RadonEyeService.getCharacteristics(uuidRead)[0]
     RadonValue = RadonEyeValue.read()
     RadonValue = struct.unpack('<f',RadonValue[2:6])[0]
-   
+
     DevBT.disconnect()
 
     # Raise exception (will try get Radon value from RadonEye again) if received a very
-    # high radon value or lower than 0. 
+    # high radon value or lower than 0.
     # Maybe a bug on RD200 or Python BLE Lib?!
     if ( RadonValue > 1000 ) or ( RadonValue < 0 ):
         raise Exception("Very strange radon value. Debugging needed.")
@@ -70,12 +72,15 @@ def GetRadonValue():
         RadonValue = ( RadonValue * 37 )
     else:
         Unit="pCi/L"
- 
-    if args.silent:
+
+    if args.silent and not args.quiet:
         print ("%0.2f" % (RadonValue))
-    else: 
+    elif args.quiet:
+        sleep (0)
+#        print ("quiet")
+    else :
         print ("%s - %s - Radon Value: %0.2f %s" % (time.strftime("%Y-%m-%d [%H:%M:%S]"),args.address,RadonValue,Unit))
-   
+
     if args.mqtt:
         if args.verbose and not args.silent:
             print ("Sending to MQTT...")
@@ -104,16 +109,15 @@ def GetRadonValue():
         sleep(1)
         clientMQTT.disconnect()
 
-    #if args.grafana:
-        #print ("Pushing to DB")
-   
+    if args.grafana and args.quiet:
+        subprocess.call(['dbpush', "%0.2f" % (RadonValue), ' 1'])
 try:
     GetRadonValue()
 
 except Exception as e:
     if args.verbose and not args.silent:
         print (e)
-    
+
     for i in range(1,4):
         try:
             if args.verbose and not args.silent:
